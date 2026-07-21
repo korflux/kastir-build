@@ -1,0 +1,67 @@
+services:
+  app:
+    image: ${KASTIR_IMAGE:-ghcr.io/korflux/kastir:latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-kastir}:${POSTGRES_PASSWORD:-kastir}@postgres:5432/${POSTGRES_DB:-kastir}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-kastir}@redis:6379
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env (32+ random characters)}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?set BETTER_AUTH_URL in .env, e.g. https://cms.example.com}
+      AUTH_TRUST_PROXY: ${AUTH_TRUST_PROXY:-true}
+      MASTER_EMAIL: ${MASTER_EMAIL:?set MASTER_EMAIL in .env}
+      MASTER_PASSWORD: ${MASTER_PASSWORD:?set MASTER_PASSWORD in .env}
+      MASTER_FORCE_RESET: ${MASTER_FORCE_RESET:-false}
+      SITE_TITLE: ${SITE_TITLE:-Kastir}
+      PANEL_LANGUAGE: ${PANEL_LANGUAGE:-en}
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    volumes:
+      - kastir-public:/app/public
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kastir}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kastir}
+      POSTGRES_DB: ${POSTGRES_DB:-kastir}
+    volumes:
+      - kastir-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-kastir} -d $${POSTGRES_DB:-kastir}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--requirepass",
+        "${REDIS_PASSWORD:-kastir}",
+      ]
+    volumes:
+      - kastir-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-kastir}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kastir-public:
+  kastir-postgres:
+  kastir-redis:
