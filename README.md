@@ -48,6 +48,15 @@ Nesse modo o EasyPanel lê o `docker-compose.yml` e cria os volumes nomeados
 persistem entre atualizações **sem nenhum passo manual**, contanto que você
 sempre atualize o mesmo Compose App (não crie um novo do zero).
 
+> **Aviso "ports is used in app. It might cause conflicts with other
+> services"** — esperado, pode ignorar. O serviço `app` publica a porta
+> direto no host (`ports: - "${HTTP_PORT:-8080}:80"`) em vez de depender da
+> aba Domínios do EasyPanel, de propósito: é o jeito que funciona igual em
+> qualquer host Docker (VPS puro, Coolify, EasyPanel, etc.), sem exigir
+> nenhuma configuração específica de plataforma. Só vira problema de verdade
+> se outro serviço no **mesmo host** já estiver usando a mesma porta —
+> nesse caso, mude `HTTP_PORT` no `.env` para uma porta livre.
+
 ### Alternativa: App a partir do repositório/Dockerfile (GitHub)
 
 Se preferir apontar o EasyPanel direto para o Dockerfile (build a partir do
