@@ -26,6 +26,48 @@ Quando os logs mostrarem migrations e bootstrap concluídos, abra:
 
 `http://SEU_HOST:8080/admin/login` (ou a porta em `HTTP_PORT`).
 
+## Deploy no EasyPanel
+
+> **Sem isso, toda atualização apaga mídia, páginas publicadas e backups
+> locais**, mesmo sem nenhuma mudança de conteúdo — o `Dockerfile` só marca
+> `/app/public` como ponto de montagem (`VOLUME /app/public`); ele **não**
+> tem como forçar nenhuma plataforma a manter um volume persistente ali.
+> Quem garante isso é a configuração do deploy, não a imagem.
+
+Existem dois jeitos de subir este projeto no EasyPanel — escolha um:
+
+### Opção recomendada: App do tipo Compose
+
+1. Crie o App como **Compose** (não "App a partir de um repositório/Dockerfile").
+2. Cole o conteúdo deste `docker-compose.yml` (ou aponte para este
+   repositório).
+3. Suba o app.
+
+Nesse modo o EasyPanel lê o `docker-compose.yml` e cria os volumes nomeados
+(`kastir-public`, `kastir-postgres`, `kastir-redis`) automaticamente — eles
+persistem entre atualizações **sem nenhum passo manual**, contanto que você
+sempre atualize o mesmo Compose App (não crie um novo do zero).
+
+### Alternativa: App a partir do repositório/Dockerfile (GitHub)
+
+Se preferir apontar o EasyPanel direto para o Dockerfile (build a partir do
+GitHub, sem usar Compose), o EasyPanel **não lê** o `docker-compose.yml` —
+ele não sabe que `/app/public` precisa ser persistente. Você precisa
+configurar isso manualmente **uma vez**, antes do primeiro upload de mídia
+ou publicação de página:
+
+1. No app, abra a aba **Mounts** (ou "Volumes", dependendo da versão).
+2. Adicione um mount do tipo **Volume** (não "Bind" para um path temporário
+   do host) com **Mount Path**: `/app/public`.
+3. Salve e faça o primeiro deploy.
+4. Depois de qualquer atualização futura ("Rebuild"/"Deploy"), confirme que
+   o mount continua listado na aba Mounts — se o EasyPanel recriar o app do
+   zero em vez de atualizá-lo, o volume pode não ser reanexado.
+
+Essa mesma regra vale para **qualquer** host Docker, não só EasyPanel
+(Coolify, VPS própria, etc.): o volume precisa sobreviver a um *redeploy*,
+não só a um *restart* do mesmo container.
+
 ## Variáveis de ambiente
 
 | Variável | Obrigatória | Uso |
@@ -43,6 +85,10 @@ Quando os logs mostrarem migrations e bootstrap concluídos, abra:
 | `BACKUP_MAX_BYTES` | Não | Teto do pacote de backup/import (bytes). Default na app se omitido |
 
 ## Persistência
+
+Se você usa EasyPanel, veja primeiro [Deploy no EasyPanel](#deploy-no-easypanel)
+acima — fora do `docker-compose.yml` puro, a plataforma precisa saber manter
+esses volumes entre atualizações.
 
 Volumes nomeados:
 
