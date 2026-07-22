@@ -72,6 +72,8 @@ não só a um *restart* do mesmo container.
 
 | Variável | Obrigatória | Uso |
 | --- | --- | --- |
+| `DATABASE_URL` | Sim | Connection string do Postgres que o app usa. Default no `.env.example` já aponta pro `postgres` deste compose — só troque se for reaproveitar um Postgres já existente |
+| `REDIS_URL` | Sim | Connection string do Redis que o app usa. Mesma ideia: default aponta pro `redis` deste compose |
 | `NEXTAUTH_SECRET` | Sim | Secret do Better Auth (≥ 32 caracteres aleatórios) |
 | `BETTER_AUTH_URL` | Sim | Origem pública (cookies/CSRF/redirects) — deve bater com a URL do navegador |
 | `MASTER_EMAIL` | Sim | E-mail do Administrador Master no primeiro boot |
@@ -80,9 +82,14 @@ não só a um *restart* do mesmo container.
 | `MASTER_FORCE_RESET` | Não | `true` só para recuperação controlada de credenciais |
 | `SITE_TITLE` / `PANEL_LANGUAGE` | Não | Defaults do painel |
 | `HTTP_PORT` | Não | Porta do host → Nginx; default `8080` |
-| `POSTGRES_*` / `REDIS_PASSWORD` | Não | Credenciais dos serviços internos; **troque em produção** |
+| `POSTGRES_*` / `REDIS_PASSWORD` | Não | Só inicializam os containers `postgres`/`redis` **deste** compose — se `DATABASE_URL`/`REDIS_URL` apontarem pra fora, essas variáveis não têm efeito nenhum |
 | `KASTIR_IMAGE` | Não | Override da imagem; default `ghcr.io/korflux/kastir:latest` |
 | `BACKUP_MAX_BYTES` | Não | Teto do pacote de backup/import (bytes). Default na app se omitido |
+
+Já tem Postgres/Redis rodando (outro serviço no mesmo projeto EasyPanel, uma
+instância gerenciada)? Aponte `DATABASE_URL`/`REDIS_URL` pra eles e remova os
+serviços `postgres`/`redis` (+ seus volumes) deste `docker-compose.yml` — não
+precisa reconstruir a URL a partir de usuário/senha separados.
 
 ## Persistência
 
