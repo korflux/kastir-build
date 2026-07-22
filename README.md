@@ -40,14 +40,24 @@ Quando os logs mostrarem migrations e bootstrap concluídos, abra:
 | `HTTP_PORT` | Não | Porta do host → Nginx; default `8080` |
 | `POSTGRES_*` / `REDIS_PASSWORD` | Não | Credenciais dos serviços internos; **troque em produção** |
 | `KASTIR_IMAGE` | Não | Override da imagem; default `ghcr.io/korflux/kastir:latest` |
+| `BACKUP_MAX_BYTES` | Não | Teto do pacote de backup/import (bytes). Default na app se omitido |
 
 ## Persistência
 
 Volumes nomeados:
 
-- `kastir-public` — uploads, páginas publicadas, `robots.txt`, `sitemap.xml`
+- `kastir-public` — **todo** o conteúdo sob `/app/public` no container:
+  - uploads de mídia (`uploads/`)
+  - HTML publicado das páginas
+  - `robots.txt`, `sitemap.xml`
+  - **backups locais** do painel (`_kastir/backups/`) — export/import/restore
+    da fase 22; o Nginx da imagem **não** serve esse path publicamente
 - `kastir-postgres` — dados do Postgres
-- `kastir-redis` — dados do Redis
+- `kastir-redis` — dados do Redis (filas / rate limit)
+
+O `docker-compose.yml` **não** precisa de volume extra para backups: eles
+já vivem no volume `kastir-public`. Apagar esse volume apaga mídia, site
+publicado **e** histórico de backup.
 
 Ao atualizar, **não** apague esses volumes — só puxe a nova imagem e suba de novo:
 
@@ -63,6 +73,10 @@ Migrations e o bootstrap do Master são idempotentes a cada boot.
 1. `docker compose pull` (ou defina `KASTIR_IMAGE` com a tag desejada)
 2. `docker compose up -d`
 3. Mantenha o mesmo `.env` e os volumes
+
+Features novas (ex.: Backup no painel) só aparecem depois que a **imagem**
+no GHCR for republicada com o código novo. Este repositório fino só puxa a
+imagem — não embute o app.
 
 ## Imagem privada / login no GHCR
 

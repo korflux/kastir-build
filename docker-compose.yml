@@ -18,6 +18,8 @@ services:
       MASTER_FORCE_RESET: ${MASTER_FORCE_RESET:-false}
       SITE_TITLE: ${SITE_TITLE:-Kastir}
       PANEL_LANGUAGE: ${PANEL_LANGUAGE:-en}
+      # Optional override for backup package size limit (empty = app default).
+      BACKUP_MAX_BYTES: ${BACKUP_MAX_BYTES:-}
     ports:
       - "${HTTP_PORT:-8080}:80"
     volumes:
