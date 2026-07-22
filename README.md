@@ -34,11 +34,44 @@ Quando os logs mostrarem migrations e bootstrap concluídos, abra:
 > tem como forçar nenhuma plataforma a manter um volume persistente ali.
 > Quem garante isso é a configuração do deploy, não a imagem.
 
-Existem dois jeitos de subir este projeto no EasyPanel — escolha um:
+### Recomendado: App via Imagem Docker
 
-### Opção recomendada: App do tipo Compose
+A função **Compose** do EasyPanel está em **beta** e, na prática, pode subir
+o container normalmente (saudável, respondendo por dentro) e mesmo assim
+**não rotear domínio nenhum até ele** — nem por IP:porta direto. Enquanto
+isso não estabiliza, o caminho mais confiável é um App apontando direto pra
+imagem já pronta, sem Git e sem Compose:
 
-1. Crie o App como **Compose** (não "App a partir de um repositório/Dockerfile").
+1. **+ Serviço** → **App**.
+2. Fonte: **Imagem** (não "Git" nem "Dockerfile") → `ghcr.io/korflux/kastir:latest`.
+3. Em **Variáveis de Ambiente**, adicione `DATABASE_URL`, `REDIS_URL`,
+   `NEXTAUTH_SECRET`, `BETTER_AUTH_URL`, `MASTER_EMAIL`, `MASTER_PASSWORD`
+   (tabela completa abaixo). `DATABASE_URL`/`REDIS_URL` precisam apontar pra
+   um Postgres/Redis — crie-os como **Serviços** nativos do EasyPanel
+   (templates prontos) no mesmo projeto, ou reaproveite algum já existente.
+4. Monte o volume persistente de `/app/public` (sem isso, mídia/páginas
+   somem a cada atualização — ver aviso acima):
+   1. Aba **Armazenamento**.
+   2. **Criar Montagem de Volume**.
+   3. **Nome**: qualquer identificador (ex.: `kastir-public`).
+   4. **Caminho de Montagem**: `/app/public`.
+   5. **Criar**.
+5. Aba **Domínios** → aponte pro serviço na porta **`80`** — é a porta que
+   o Nginx do container escuta de fato. Não use `3000` (Next.js só em
+   loopback dentro do container, inalcançável de fora de propósito) nem
+   `8080` (só existe no modo Compose, via `HTTP_PORT`).
+6. Implantar.
+
+### Alternativa: App do tipo Compose
+
+Mais simples pra quem só quer `docker compose up -d` puro — Postgres/Redis
+já vêm no arquivo, volumes nomeados são criados sozinhos. Mas, com o Compose
+do EasyPanel em beta, se o domínio não rotear mesmo com o container saudável
+(sintoma: "Service is not reachable" mesmo testando várias portas), não
+perca tempo depurando o proxy — migre pro caminho "App via Imagem Docker"
+acima.
+
+1. Crie o App como **Compose**.
 2. Cole o conteúdo deste `docker-compose.yml` (ou aponte para este
    repositório).
 3. Suba o app.
@@ -57,25 +90,9 @@ sempre atualize o mesmo Compose App (não crie um novo do zero).
 > se outro serviço no **mesmo host** já estiver usando a mesma porta —
 > nesse caso, mude `HTTP_PORT` no `.env` para uma porta livre.
 
-### Alternativa: App a partir do repositório/Dockerfile (GitHub)
-
-Se preferir apontar o EasyPanel direto para o Dockerfile (build a partir do
-GitHub, sem usar Compose), o EasyPanel **não lê** o `docker-compose.yml` —
-ele não sabe que `/app/public` precisa ser persistente. Você precisa
-configurar isso manualmente **uma vez**, antes do primeiro upload de mídia
-ou publicação de página:
-
-1. No app, abra a aba **Mounts** (ou "Volumes", dependendo da versão).
-2. Adicione um mount do tipo **Volume** (não "Bind" para um path temporário
-   do host) com **Mount Path**: `/app/public`.
-3. Salve e faça o primeiro deploy.
-4. Depois de qualquer atualização futura ("Rebuild"/"Deploy"), confirme que
-   o mount continua listado na aba Mounts — se o EasyPanel recriar o app do
-   zero em vez de atualizá-lo, o volume pode não ser reanexado.
-
-Essa mesma regra vale para **qualquer** host Docker, não só EasyPanel
-(Coolify, VPS própria, etc.): o volume precisa sobreviver a um *redeploy*,
-não só a um *restart* do mesmo container.
+Essa mesma regra de volume persistente vale para **qualquer** host Docker,
+não só EasyPanel (Coolify, VPS própria, etc.): o volume precisa sobreviver a
+um *redeploy*, não só a um *restart* do mesmo container.
 
 ## Variáveis de ambiente
 
@@ -90,7 +107,7 @@ não só a um *restart* do mesmo container.
 | `AUTH_TRUST_PROXY` | Não | Default `true` (Nginx do container sobrescreve headers de IP) |
 | `MASTER_FORCE_RESET` | Não | `true` só para recuperação controlada de credenciais |
 | `SITE_TITLE` / `PANEL_LANGUAGE` | Não | Defaults do painel |
-| `HTTP_PORT` | Não | Porta do host → Nginx; default `8080` |
+| `HTTP_PORT` | Não | Porta do host → Nginx; default `8080`. Só se aplica ao modo Compose (`docker compose up -d` / App Compose do EasyPanel) — no modo App via Imagem, a porta é sempre `80` internamente, configurada na aba Domínios |
 | `POSTGRES_*` / `REDIS_PASSWORD` | Não | Só inicializam os containers `postgres`/`redis` **deste** compose — se `DATABASE_URL`/`REDIS_URL` apontarem pra fora, essas variáveis não têm efeito nenhum |
 | `KASTIR_IMAGE` | Não | Override da imagem; default `ghcr.io/korflux/kastir:latest` |
 | `BACKUP_MAX_BYTES` | Não | Teto do pacote de backup/import (bytes). Default na app se omitido |
